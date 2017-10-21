@@ -24,7 +24,7 @@ import android.util.Log;
 
 class PressureCooker {
     private static final String PREFS_NAME = "Markers";
-    
+
     private static final String PREF_MIN_DIAMETER = "min_diameter";
     private static final String PREF_MAX_DIAMETER = "max_diameter";
     private static final String PREF_PRESSURE_MIN = "pressure_min";
@@ -39,30 +39,33 @@ class PressureCooker {
     private float mPressureMin = 0;
     private float mPressureMax = 1;
 
+    private float localPressureMin = 1;
+    private float localPressureMax = 0;
+
     public static final float PRESSURE_UPDATE_DECAY = 0.1f;
     public static final int PRESSURE_UPDATE_STEPS_FIRSTBOOT = 100; // points, a quick-training regimen
     public static final int PRESSURE_UPDATE_STEPS_NORMAL = 1000; // points, in normal use
 
     private static final boolean PARTNER_HACK = false;
-    
+
     private int mPressureCountdownStart = PRESSURE_UPDATE_STEPS_NORMAL;
     private int mPressureUpdateCountdown = mPressureCountdownStart;
     private float mPressureRecentMin = 1;
     private float mPressureRecentMax = 0;
-    
+
     private Context mContext;
-    
+
     public PressureCooker(Context context) {
         mContext = context;
         loadStats();
     }
-    
+
     public void loadStats() {
         SharedPreferences prefs = mContext.getSharedPreferences(PREFS_NAME, Context.MODE_WORLD_READABLE);
 
         mPressureMin = prefs.getFloat(PREF_PRESSURE_MIN, DEF_PRESSURE_MIN);
         mPressureMax = prefs.getFloat(PREF_PRESSURE_MAX, DEF_PRESSURE_MAX);
-        
+
         final boolean firstRun = prefs.getBoolean(PREF_FIRST_RUN, true);
         setFirstRun(firstRun);
     }
@@ -71,23 +74,34 @@ class PressureCooker {
         SharedPreferences prefs = mContext.getSharedPreferences(PREFS_NAME, Context.MODE_WORLD_READABLE);
         SharedPreferences.Editor prefsE = prefs.edit();
         prefsE.putBoolean(PREF_FIRST_RUN, false);
-    
+
         prefsE.putFloat(PREF_PRESSURE_MIN, mPressureMin);
         prefsE.putFloat(PREF_PRESSURE_MAX, mPressureMax);
-    
+
         prefsE.commit();
     }
-    
+
     // Adjusts pressure values on the fly based on historical maxima/minima.
     public float getAdjustedPressure(float pressure) {
+        if(pressure < localPressureMin){ localPressureMin = pressure; }
+        if(pressure > localPressureMax){ localPressureMax = pressure; }
+        //hardwired pressure range
+        final float minPressure = 0.1823f;
+        final float maxPressure = 0.3866f;
+        final float adjustedPressure = (pressure-minPressure) / (maxPressure-minPressure);
+
+        //Log.d(Slate.TAG, String.format("pressure=%.4f range=%.4f-%.4f adjustedPressure=%.4f", pressure, localPressureMin, localPressureMax, adjustedPressure));
+        return adjustedPressure*3;
+
+        /*
         if (PARTNER_HACK) {
-            return pressure; 
+            return pressure;
         }
-        
+
         mLastPressure = pressure;
         if (pressure < mPressureRecentMin) mPressureRecentMin = pressure;
         if (pressure > mPressureRecentMax) mPressureRecentMax = pressure;
-        
+
         if (--mPressureUpdateCountdown == 0) {
             final float decay = PRESSURE_UPDATE_DECAY;
             mPressureMin = (1-decay) * mPressureMin + decay * mPressureRecentMin;
@@ -104,43 +118,40 @@ class PressureCooker {
                     mPressureCountdownStart = PRESSURE_UPDATE_STEPS_NORMAL;
             }
             mPressureUpdateCountdown = mPressureCountdownStart;
-            
+
             saveStats();
         }
 
-        final float pressureNorm = (pressure - mPressureMin)
-            / (mPressureMax - mPressureMin);
+        final float pressureNorm = (pressure - mPressureMin) / (mPressureMax - mPressureMin);
 
-        /*
-            Log.d(Slate.TAG, String.format("pressure=%.2f range=%.2f-%.2f obs=%.2f-%.2f pnorm=%.2f",
-                pressure, mPressureMin, mPressureMax, mPressureRecentMin, mPressureRecentMax, pressureNorm));
-        */
+        //Log.d(Slate.TAG, String.format("pressure=%.4f range=%.4f-%.4f obs=%.4f-%.4f pnorm=%.4f", pressure, mPressureMin, mPressureMax, mPressureRecentMin, mPressureRecentMax, pressureNorm));
 
         return pressureNorm;
+        */
     }
-    
+
     static final Paint mDebugPaint;
     static {
         mDebugPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         mDebugPaint.setColor(0xFFFF0000);
     }
-    
+
     public void drawDebug(Canvas canvas) {
         if (PARTNER_HACK) return;
         canvas.drawText(
-              String.format("[pressurecooker] pressure: %.2f (range: %.2f-%.2f) (recent: %.2f-%.2f) recal: %d", 
-                      mLastPressure,
-                      mPressureMin, mPressureMax,
-                      mPressureRecentMin, mPressureRecentMax,
-                      mPressureUpdateCountdown),
-                  96, canvas.getHeight() - 64, mDebugPaint);
+                String.format("[pressurecooker] pressure: %.2f (range: %.2f-%.2f) (recent: %.2f-%.2f) recal: %d",
+                        mLastPressure,
+                        mPressureMin, mPressureMax,
+                        mPressureRecentMin, mPressureRecentMax,
+                        mPressureUpdateCountdown),
+                96, canvas.getHeight() - 64, mDebugPaint);
     }
 
     public void setFirstRun(boolean firstRun) {
         if (firstRun) {
             // "Why do my eyes hurt?"
             // "You've never used them before."
-            
+
             mPressureUpdateCountdown = mPressureCountdownStart = PRESSURE_UPDATE_STEPS_FIRSTBOOT;
         }
     }
@@ -149,7 +160,7 @@ class PressureCooker {
         mPressureMin = min;
         mPressureMax = max;
     }
-    
+
     public float[] getPressureRange(float[] r) {
         r[0] = mPressureMin;
         r[1] = mPressureMax;
