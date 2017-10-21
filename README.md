@@ -1,5 +1,5 @@
 # markers
-https://github.com/metasophiea/markers/blob/master/markers.apk?raw=true
+[download](https://github.com/metasophiea/markers/blob/master/markers.apk?raw=true)
 
 Modification of Daniel Sandler's Markers app for Android
 
