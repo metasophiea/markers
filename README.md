@@ -6,4 +6,4 @@ I've also adjusted the drawing density, expanding the drawing space.
 
 My tablet is a Samsung Tab 2 10.1 (GT-P5110) running Android 4.2.2
 
-[download](https://github.com/metasophiea/markers/blob/master/markers.apk?raw=true)
+[download apk](https://github.com/metasophiea/markers/blob/master/markers.apk?raw=true)
